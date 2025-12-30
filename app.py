@@ -1,7 +1,19 @@
 import streamlit as st
 from gtts import gTTS
 import io
-import speech_recognition as sr
+import json
+import soundfile as sf
+import numpy as np
+from vosk import Model, KaldiRecognizer
+
+# =======================
+# Load VOSK Model
+# =======================
+@st.cache_resource
+def load_model():
+    return Model("vosk-model-small-ur-pk-0.4")
+
+vosk_model = load_model()
 
 # =======================
 # Custom CSS (Urdu Font)
@@ -22,10 +34,10 @@ textarea {
 """
 st.markdown(css, unsafe_allow_html=True)
 
-st.title("Urdu Text-to-Speech & Speech-to-Text Converter")
+st.title("Urdu Text-to-Speech & Speech-to-Text (100% FREE)")
 
 # =======================
-# Text-to-Speech (UNCHANGED)
+# Text-to-Speech
 # =======================
 st.subheader("Text-to-Speech (Urdu)")
 
@@ -36,16 +48,11 @@ if "audio_bytes" not in st.session_state:
 
 if st.button("Generate MP3"):
     if urdu_text.strip():
-        try:
-            tts = gTTS(text=urdu_text, lang="ur")
-            audio_io = io.BytesIO()
-            tts.write_to_fp(audio_io)
-            st.session_state.audio_bytes = audio_io.getvalue()
-            st.success("Audio generated successfully!")
-        except Exception as e:
-            st.error(str(e))
-    else:
-        st.warning("Please enter some Urdu text.")
+        tts = gTTS(text=urdu_text, lang="ur")
+        audio_io = io.BytesIO()
+        tts.write_to_fp(audio_io)
+        st.session_state.audio_bytes = audio_io.getvalue()
+        st.success("Audio generated successfully!")
 
 if st.session_state.audio_bytes:
     st.audio(st.session_state.audio_bytes, format="audio/mp3")
@@ -56,21 +63,12 @@ if st.session_state.audio_bytes:
         "audio/mp3"
     )
 
-if st.button("Clear Audio"):
-    st.session_state.audio_bytes = None
-
 # =======================
-# Speech-to-Text (WAV ONLY)
+# Speech-to-Text (FREE)
 # =======================
-st.subheader("Speech-to-Text (Urdu)")
+st.subheader("Speech-to-Text (Urdu – Offline)")
 
-st.info(
-    "📢 Upload WAV file only\n"
-    "- Mono\n"
-    "- 16-bit PCM\n"
-    "- Max 60 seconds\n"
-    "- Clear speech\n"
-)
+st.info("Upload WAV file (Mono, 16-bit PCM)")
 
 uploaded_file = st.file_uploader(
     "Upload WAV audio file",
@@ -79,22 +77,18 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file:
     try:
-        recognizer = sr.Recognizer()
+        data, samplerate = sf.read(uploaded_file)
+        if data.ndim > 1:
+            data = np.mean(data, axis=1)
 
-        with sr.AudioFile(uploaded_file) as source:
-            audio_data = recognizer.record(source)
+        recognizer = KaldiRecognizer(vosk_model, samplerate)
+        recognizer.AcceptWaveform(data.tobytes())
+        result = json.loads(recognizer.Result())
 
-        text = recognizer.recognize_google(
-            audio_data,
-            language="ur-PK"
-        )
+        text = result.get("text", "")
 
         st.success("Urdu text generated from audio:")
         st.text_area("Urdu Text", value=text, height=150)
 
-    except sr.UnknownValueError:
-        st.error("Speech was unclear or could not be recognized.")
-    except sr.RequestError:
-        st.error("Google Speech API rejected the audio. Please check format.")
     except Exception as e:
         st.error(str(e))
