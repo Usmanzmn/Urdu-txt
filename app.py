@@ -3,6 +3,23 @@ import streamlit as st
 from gtts import gTTS
 import io
 
+# Custom CSS for Jameel Noori Nastaleeq font
+css = """
+<style>
+@font-face {
+    font-family: 'jameel-noori-nastaleeq';
+    src: url('https://cdn.jsdelivr.net/gh/tariq-abdullah/urdu-web-font-CDN/JameelNooriNastaleeq.woff') format('woff');
+}
+textarea {
+    font-family: 'jameel-noori-nastaleeq' !important;
+    font-size: 24px !important;
+    direction: rtl !important;
+    text-align: right !important;
+}
+</style>
+"""
+st.markdown(css, unsafe_allow_html=True)
+
 st.title("Urdu Text-to-Speech Converter")
 
 # Text input
