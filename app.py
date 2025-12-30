@@ -15,17 +15,19 @@ if st.button("Generate MP3"):
             tts = gTTS(text=urdu_text, lang='ur')
             
             # Save to bytes buffer
-            audio_bytes = io.BytesIO()
-            tts.write_to_fp(audio_bytes)
-            audio_bytes.seek(0)
+            audio_bytes_io = io.BytesIO()
+            tts.write_to_fp(audio_bytes_io)
+            
+            # Get the bytes content
+            mp3_bytes = audio_bytes_io.getvalue()
             
             # Preview audio
-            st.audio(audio_bytes, format="audio/mp3")
+            st.audio(mp3_bytes, format="audio/mp3")
             
             # Download button
             st.download_button(
                 label="Download MP3",
-                data=audio_bytes,
+                data=mp3_bytes,
                 file_name="urdu_audio.mp3",
                 mime="audio/mp3"
             )
